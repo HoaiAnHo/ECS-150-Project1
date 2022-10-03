@@ -5,6 +5,11 @@
 
 #define CMDLINE_MAX 512
 
+// char* parse() {
+//         /* Take in arguments from terminal input */
+
+
+// }
 int main(void)
 {
         char cmd[CMDLINE_MAX];
@@ -14,7 +19,7 @@ int main(void)
                 //int retval;
                 pid_t pid;
                 char *args[] = {"Hi", NULL};
-                
+
 
                 /* Print prompt */
                 printf("sshell$@ucd ");
@@ -49,6 +54,7 @@ int main(void)
                 pid = fork();
                 if (pid == 0) {
                         /* Child */
+                        printf("cmd: '%s'", cmd);
                         execv(cmd,args);
                         perror("execv");
                         exit(1);
