@@ -22,9 +22,10 @@ int main(void)
         while (1) {
                 char *nl;
                 //int retval;
+                char *arg1;
+                char *command1;
                 pid_t pid;
-                //char path = "";
-                char *args[] = {"Hi", NULL};
+                //char *args[] = {arg1, NULL};
 
 
                 /* Print prompt */
@@ -52,6 +53,18 @@ int main(void)
                         break;
                 }
 
+                /* Parse for arguments */
+                arg1 = strchr(cmd, '-');
+                printf("arg1:%s ", arg1);
+
+
+                command1 = strtok(cmd, " ");
+                printf("command1: %s ", command1);
+
+                char *args[] = {command1, arg1, NULL};
+
+
+
                 /* Regular command */
                 // retval = system(cmd);
                 // fprintf(stdout, "Return status value for '%s': %d\n",
@@ -68,7 +81,7 @@ int main(void)
                 if (pid == 0) {
                         /* Child */
                         //printf("cmd: '%s'", cmd);
-                        execvp(cmd,args);
+                        execvp(command1, args);
                         perror("execv");
                         exit(1);
                 } else if (pid > 0) {
