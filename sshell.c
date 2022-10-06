@@ -11,14 +11,6 @@
 //         arg[0] = &strchr(command, ' ');
 //         return *arg;
 // }
-// char* cmd_convert(char* command){
-//         /* add /bin/ to command */
-//         printf("got in");
-//         char* final_cmd = strcat("/bin/", command);
-//         printf("got concat");
-//         printf("final command: '%s'", final_cmd);
-//         return final_cmd;
-// }
 // struct cmd_arg {
 //         char command[CMDLINE_MAX];
 //         char *args[];
@@ -66,8 +58,8 @@ int main(void)
                 //         cmd, retval);
 
                 /* Add "/bin/" to command */
-                char bin[CMDLINE_MAX] = "/bin/";
-                strcat(bin, cmd);
+                //char bin[CMDLINE_MAX] = "/bin/";
+                //strcat(bin, cmd);
                 //printf("final command: '%s'", src);
 
 
@@ -76,7 +68,7 @@ int main(void)
                 if (pid == 0) {
                         /* Child */
                         //printf("cmd: '%s'", cmd);
-                        execv(bin,args);
+                        execvp(cmd,args);
                         perror("execv");
                         exit(1);
                 } else if (pid > 0) {
