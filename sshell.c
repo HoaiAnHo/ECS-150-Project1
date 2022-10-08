@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #define CMDLINE_MAX 512
 
@@ -15,6 +16,14 @@
 //         char command[CMDLINE_MAX];
 //         char *args[];
 // };
+
+// searching for special chars
+// int special_char(char* command)
+// {
+//         // 
+//         return 0;
+// }
+
 int main(void)
 {
         char cmd[CMDLINE_MAX];
@@ -25,6 +34,7 @@ int main(void)
                 char *arg1;
                 char *command1;
                 pid_t pid;
+                
                 //char *args[] = {arg1, NULL};
 
 
@@ -54,12 +64,17 @@ int main(void)
                 }
 
                 /* Parse for arguments */
-                arg1 = strchr(cmd, '-');
-                printf("arg1:%s ", arg1);
+                // first command
+                command1 = cmd;
+                nl = strchr(command1, ' ');
+                *nl = '\0';
+                nl++;
 
+                //more args
+                arg1 = strchr(cmd, '\0');
 
-                command1 = strtok(cmd, " ");
-                printf("command1: %s ", command1);
+                printf("command1: %s \n", command1);
+                printf("arg1:%s \n", arg1);
 
                 char *args[] = {command1, arg1, NULL};
 
