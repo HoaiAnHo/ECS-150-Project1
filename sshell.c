@@ -16,26 +16,37 @@
 //         char *args[];
 // };
 
-//this wasn't tested
-int redirect_check(char* given_cmd) {
-        int final_fd;
-        char* cmd_ptr = strchr(given_cmd, '>');
-        if(cmd_ptr){
-                while (cmd_ptr != ' ' || cmd_ptr != NULL){
-                        cmd_ptr++;
-                }
-                final_fd = open(cmd_ptr, O_WRONLY | O_CREAT, 0644);
-                dup2(final_fd, STDOUT_FILENO);
-                close(final_fd);
-                // i'm assuming all the executed stuff will now go to the file
-                return final_fd;
-        }
-        return 0;
+// at the start of the main, check for '|' char
+// if found, we're making multiple cmd_arg structures
+struct cmd_arg {
+        char full_cmd[CMDLINE_MAX];
+        char* command;
+        char* args[];
+        char* filename = NULL;
 }
+
+//this wasn't tested
+// int redirect_check(char* given_cmd) {
+//         int final_fd;
+//         char* cmd_ptr = strchr(given_cmd, '>');
+//         if(cmd_ptr){
+//                 while (cmd_ptr != ' ' || cmd_ptr != NULL){
+//                         cmd_ptr++;
+//                 }
+//                 final_fd = open(cmd_ptr, O_WRONLY | O_CREAT, 0644);
+//                 dup2(final_fd, STDOUT_FILENO);
+//                 close(final_fd);
+//                 // i'm assuming all the executed stuff will now go to the file
+//                 return final_fd;
+//         }
+//         return 0;
+// }
 
 int main(void)
 {
         char cmd[CMDLINE_MAX];
+        struct cmd_arg pipe_commands[3];
+        char* pipe_check = strchr(cmd, '|');
 
         while (1) {
                 char *nl;
