@@ -23,7 +23,10 @@ int main(void)
                 char *nl;
                 //int retval;
                 char *arg1;
+                //char *arg2 = "";
                 char *command1;
+                char *command2;
+                //char *full_cmd;
                 pid_t pid;
                 //char *args[] = {arg1, NULL};
 
@@ -48,18 +51,42 @@ int main(void)
                 }
 
                 /* Builtin command */
+                /* Exit */
                 if (!strcmp(cmd, "exit")) {
                         fprintf(stderr, "Bye...\n");
                         break;
                 }
 
+                /* cd */
+                // if (!strcmp(cmd, "cd")) {
+
+                // }
+
                 /* Parse for arguments */
-                arg1 = strchr(cmd, '-');
-                printf("arg1:%s ", arg1);
+                //first argument
+                command2 = strdup(cmd);
+                printf("command1: %s ", command2);
+                arg1 = strchr(command2,' ');
+                printf("arg1: %s \n", arg1);
+                //extracts the space from the argument
+                if (arg1) {
+                        arg1++;
+                }
+                //printf("first index of arg1: %c \n", arg1[0]);
+                printf("nl: %s ", arg1);
+                // *nl = '\0';
+                // nl++;
+                printf("command: %s ", cmd);
+                //more args
+                //arg1 = strchr(cmd, '\0');
 
-
+                //command
                 command1 = strtok(cmd, " ");
-                printf("command1: %s ", command1);
+
+                printf("command: %s \n", command1);
+                //printf("arg1: %s \n", arg1);
+
+
 
                 char *args[] = {command1, arg1, NULL};
 
@@ -69,12 +96,6 @@ int main(void)
                 // retval = system(cmd);
                 // fprintf(stdout, "Return status value for '%s': %d\n",
                 //         cmd, retval);
-
-                /* Add "/bin/" to command */
-                //char bin[CMDLINE_MAX] = "/bin/";
-                //strcat(bin, cmd);
-                //printf("final command: '%s'", src);
-
 
                 /* fork() + exec() + wait() */
                 pid = fork();
@@ -89,7 +110,7 @@ int main(void)
                         int status;
                         waitpid(pid, &status, 0);
                         //printf( "Return status value for '%s' : %d\n", bin, WEXITSTATUS(status));
-                        fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(status));
+                        fprintf(stderr, "+ completed '%s' [ %d ]\n", command2, WEXITSTATUS(status));
                 } else {
                         perror("fork");
                         exit(1);
