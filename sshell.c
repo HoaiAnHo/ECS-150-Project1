@@ -77,11 +77,11 @@ int main(void)
                         while(c1.o_filename[0] == '>') {
                                 c1.o_filename++;
                         }
-                        printf("filename: %s", c1.o_filename);
+                        //printf("filename: %s", c1.o_filename);
                         fd = open(c1.o_filename,O_WRONLY | O_CREAT, 0644);
-                        printf("arg1: %s ", c1.arg1);
+                        //printf("arg1: %s ", c1.arg1);
                         c1.arg1 = strtok(c1.arg1,">");
-                        printf("arg1: %s ", c1.arg1);
+                        //printf("arg1: %s ", c1.arg1);
                         c1.arg1 = strtok(c1.arg1," ");
                         // if (strcmp(c1.command1, "echo")) {
                         //         c1.arg1 = strtok(c1.arg1," ");
@@ -147,3 +147,4 @@ int main(void)
         }
 
         return EXIT_SUCCESS;
+}
