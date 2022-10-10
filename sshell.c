@@ -2,16 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #define CMDLINE_MAX 512
 
-struct cmd_line {
-        char *command1;
-        char *arg1;
-        char *meta_char;
-        char *o_filename;
-};
+// char* parse(char* command) {
+//         /* Take in arguments from terminal input */
+//         char arg[CMDLINE_MAX] = " ";
+//         arg[0] = &strchr(command, ' ');
+//         return *arg;
+// }
+// struct cmd_arg {
+//         char command[CMDLINE_MAX];
+//         char *args[];
+// };
 int main(void)
 {
         char cmd[CMDLINE_MAX];
@@ -19,15 +22,12 @@ int main(void)
         while (1) {
                 char *nl;
                 //int retval;
-                //char *arg1;
+                char *arg1;
                 //char *arg2 = "";
-                //char *command1;
-                char *command_copy;
-                //char *parse_arg = NULL;
+                char *command1;
+                char *command2;
                 //char *full_cmd;
                 pid_t pid;
-                char cwd_buffer[256];
-                int fd;
                 //char *args[] = {arg1, NULL};
 
 
@@ -50,26 +50,31 @@ int main(void)
                         *nl = '\0';
                 }
 
-                struct cmd_line c1;
+                /* Builtin command */
+                /* Exit */
+                if (!strcmp(cmd, "exit")) {
+                        fprintf(stderr, "Bye...\n");
+                        break;
+                }
+
+                /* cd */
+                // if (!strcmp(cmd, "cd")) {
+
+                // }
 
                 /* Parse for arguments */
                 /* first argument */
-                command_copy = strdup(cmd);
-                c1.arg1 = strchr(command_copy,' ');
-
+                command2 = strdup(cmd);
+                //printf("command1: %s ", command2);
+                arg1 = strchr(command2,' ');
+                //printf("arg1: %s \n", arg1);
                 /* extracts the space from the argument */
-                if (c1.arg1) {
-                        c1.arg1++;
-                        while (c1.arg1[0] == ' ' && c1.arg1 != NULL) {
-                                c1.arg1++;
-                        }
-                        /* Check for Output Redirection */
-                        c1.meta_char = strchr(c1.arg1, '>');
+                if (arg1) {
+                        arg1++;
                 }
-                //printf("meta_char: %s ", c1.meta_char);
 
-                /* Command */
-                c1.command1 = strtok(cmd, " ");
+                /* command */
+                command1 = strtok(cmd, " ");
 
                 /* Exclude Output Redirection from Arguments */
                 if (c1.meta_char) {
@@ -124,14 +129,8 @@ int main(void)
                 pid = fork();
                 if (pid == 0) {
                         /* Child */
-                        /* Setup for Output Redirection */
-                        if (c1.meta_char) {
-                        dup2(fd, STDOUT_FILENO);
-                        execvp(c1.command1, args);
-                        close(fd);
-                        } else {
-                                execvp(c1.command1, args);
-                        }
+                        //printf("cmd: '%s'", cmd);
+                        execvp(command1, args);
                         perror("execv");
                         exit(1);
                 } else if (pid > 0) {
@@ -139,7 +138,7 @@ int main(void)
                         int status;
                         waitpid(pid, &status, 0);
                         //printf( "Return status value for '%s' : %d\n", bin, WEXITSTATUS(status));
-                        fprintf(stderr, "+ completed '%s' [ %d ]\n", command_copy, WEXITSTATUS(status));
+                        fprintf(stderr, "+ completed '%s' [ %d ]\n", command2, WEXITSTATUS(status));
                 } else {
                         perror("fork");
                         exit(1);
