@@ -17,12 +17,48 @@
 //         char *args[];
 // };
 
+// function to return an array of commands for pipelining
+
+// function to perform output redirection
+
+// function to perform input redirection
+
 // searching for special chars
-// int special_char(char* command)
-// {
-//         // 
-//         return 0;
-// }
+int special_char(char* command)
+{
+        // search for pipe |
+        // if found, return 1
+
+        // search for output redirection >
+        // if found, return 2;
+
+        // search for input redirection <
+        // if found, return 3;
+
+        return 0;
+}
+
+char* command_parse(char* given_cmd, char* final_cmd){
+        int increment = 0;
+        while (isalpha(given_cmd[increment])){
+                final_cmd[increment] = given_cmd[increment];
+                increment++;
+        }
+        return final_cmd;
+}
+
+//assume no piping or redirection
+//hopefully you have other functions to deal with that
+char* argument_parse(char* given_cmd, char* final_arg){
+        //go through to find arg1
+        while ((given_cmd != NULL) && (given_cmd[increment] == '\0')){
+                if(given_cmd[increment] == ' ') given_cmd++;
+                else {
+                        *final_arg = *given_cmd;
+                }
+        }
+        return final_arg;
+}
 
 int main(void)
 {
@@ -65,31 +101,33 @@ int main(void)
 
                 /* Parse for arguments */
                 // first command
-                command1 = cmd;
-                nl = strchr(command1, ' ');
-                *nl = '\0';
-                nl++;
+                // command1 = cmd;
+                // nl = strchr(command1, ' ');
+                // *nl = '\0';
+                // nl++;
 
                 //more args
-                arg1 = strchr(cmd, '\0');
+                // arg1 = strchr(cmd, '\0');
 
                 printf("command1: %s \n", command1);
                 printf("arg1:%s \n", arg1);
 
+                int cmd_len = strlen(cmd);
+                int command1_len = strlen(command1);
+                command1 = command_parse(cmd, command1);
+
+                // if cmd_len > command1_len
+                // if cmd[command1_len] != '\0'
+
                 char *args[] = {command1, arg1, NULL};
-
-
 
                 /* Regular command */
                 // retval = system(cmd);
                 // fprintf(stdout, "Return status value for '%s': %d\n",
                 //         cmd, retval);
 
-                /* Add "/bin/" to command */
-                //char bin[CMDLINE_MAX] = "/bin/";
-                //strcat(bin, cmd);
-                //printf("final command: '%s'", src);
-
+                // check if command1 is either pwd or cd
+                // chdir()
 
                 /* fork() + exec() + wait() */
                 pid = fork();
