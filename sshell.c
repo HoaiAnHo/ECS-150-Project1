@@ -45,8 +45,15 @@ struct cmd_arg {
 int main(void)
 {
         char cmd[CMDLINE_MAX];
-        struct cmd_arg pipe_commands[3];
-        char* pipe_check = strchr(cmd, '|');
+        // struct cmd_arg pipe_commands[3];
+        // char* pipe_check = strchr(cmd, '|');
+        // if (pipe_check){
+        //         char *parse_ptr = *cmd;
+        //         int command_index = 0;
+        //         while (parse_ptr != NULL){
+        //                 pipe_commands[command_index] = parse_ptr;
+        //         }
+        // }
 
         while (1) {
                 char *nl;
