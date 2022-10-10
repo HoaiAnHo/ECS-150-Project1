@@ -15,6 +15,24 @@
 //         char command[CMDLINE_MAX];
 //         char *args[];
 // };
+
+//this wasn't tested
+int redirect_check(char* given_cmd) {
+        int final_fd;
+        char* cmd_ptr = strchr(given_cmd, '>');
+        if(cmd_ptr){
+                while (cmd_ptr != ' ' || cmd_ptr != NULL){
+                        cmd_ptr++;
+                }
+                final_fd = open(cmd_ptr, O_WRONLY | O_CREAT, 0644);
+                dup2(final_fd, STDOUT_FILENO);
+                close(final_fd);
+                // i'm assuming all the executed stuff will now go to the file
+                return final_fd;
+        }
+        return 0;
+}
+
 int main(void)
 {
         char cmd[CMDLINE_MAX];
