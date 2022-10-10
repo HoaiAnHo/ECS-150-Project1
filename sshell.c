@@ -71,7 +71,12 @@ int main(void)
                 /* extracts the space from the argument */
                 if (arg1) {
                         arg1++;
+                        while (arg1[0] == ' ' && arg1 != NULL)
+                        {
+                                arg1++;
+                        }
                 }
+                //printf("%c", arg1[0]);
 
                 /* command */
                 command1 = strtok(cmd, " ");
