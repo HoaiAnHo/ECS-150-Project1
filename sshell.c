@@ -9,9 +9,11 @@
 struct cmd_line {
         char *command1;
         char *arg1;
-        char *meta_char;
+        int meta_char;
         char *o_filename;
 };
+int redirect_out(char *command);
+
 int main(void)
 {
         char cmd[CMDLINE_MAX];
@@ -23,12 +25,10 @@ int main(void)
                 //char *arg2 = "";
                 //char *command1;
                 char *command_copy;
-                //char *parse_arg = NULL;
-                //char *full_cmd;
+                char *dir;
                 pid_t pid;
                 char cwd_buffer[256];
                 int fd;
-                //char *args[] = {arg1, NULL};
 
 
                 /* Print prompt */
@@ -52,6 +52,9 @@ int main(void)
 
                 struct cmd_line c1;
 
+                /* Check for Output Redirection */
+                c1.meta_char = redirect_out(cmd);
+
                 /* Parse for arguments */
                 /* first argument */
                 command_copy = strdup(cmd);
@@ -63,37 +66,47 @@ int main(void)
                         while (c1.arg1[0] == ' ' && c1.arg1 != NULL) {
                                 c1.arg1++;
                         }
-                        /* Check for Output Redirection */
-                        c1.meta_char = strchr(c1.arg1, '>');
                 }
                 //printf("meta_char: %s ", c1.meta_char);
 
                 /* Command */
                 c1.command1 = strtok(cmd, " ");
+                //printf("command: %s", c1.command1);
+                
 
-                /* Exclude Output Redirection from Arguments */
+                /* Get FileName */
                 if (c1.meta_char) {
-                        c1.o_filename = c1.meta_char;
-                        while(c1.o_filename[0] == '>') {
+                        c1.o_filename = strchr(command_copy, '>');
+                        //printf("file name: %s", c1.o_filename);
+                        while(c1.o_filename[0] == '>' || c1.o_filename[0] == ' ') {
                                 c1.o_filename++;
                         }
                         //printf("filename: %s", c1.o_filename);
-                        fd = open(c1.o_filename,O_WRONLY | O_CREAT, 0644);
-                        //printf("arg1: %s ", c1.arg1);
-                        c1.arg1 = strtok(c1.arg1,">");
-                        //printf("arg1: %s ", c1.arg1);
-                        c1.arg1 = strtok(c1.arg1," ");
-                        // if (strcmp(c1.command1, "echo")) {
-                        //         c1.arg1 = strtok(c1.arg1," ");
-                        // }
-                        //c1.arg1 = strtok(c1.arg1," ");
-                        // if (c1.arg1[0] == ' ') {
-                        //         c1.arg1 = NULL;
-                        // } else {
-                        //         c1.arg1 = strtok(c1.arg1," ");
-                        // }
-                        // printf("arg2: %s ", c1.arg1);
+                        fd = open(c1.o_filename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 }
+
+                /* Clean up Argument */
+                printf("arg: %s\n", c1.arg1);
+                if (c1.meta_char) {
+                        if(!c1.arg1){
+                                //still doesn't really work
+                                c1.command1 = strtok(cmd, ">");
+                                printf("parsed command: %s", c1.command1);
+                                c1.arg1 = NULL;
+                        } else {
+                                c1.arg1 = strtok(c1.arg1, ">");
+                                //printf("new arg: %s\n", c1.arg1);
+                                if (c1.arg1 == c1.o_filename) {
+                                        c1.arg1 = NULL;
+                                        //printf("arg1: %s\n", c1.arg1);
+                                }
+                        }
+                }
+                
+                /* special case */
+                        if (strcmp(c1.command1, "echo") != 0) {
+                                c1.arg1 = strtok(c1.arg1," ");
+                        }
 
                 char *args[] = {c1.command1, c1.arg1, NULL};
 
@@ -102,12 +115,15 @@ int main(void)
                 /* Exit */
                 if (!strcmp(cmd, "exit")) {
                         fprintf(stderr, "Bye...\n");
+                        //fprintf(stderr, "+ completed '%s' [ %d ]\n", command_copy, WEXITSTATUS(status));
                         break;
                 }
 
                 /* cd */
                 if (!strcmp(c1.command1, "cd")) {
-                        chdir(c1.arg1);
+                        printf("directory: %s \n", c1.arg1);
+                        dir = strtok(c1.arg1,"\n");
+                        chdir(dir);
                 }
 
                 /* pwd */
@@ -115,20 +131,15 @@ int main(void)
                         getcwd(cwd_buffer, 256);
                 }
 
-                /* Regular command */
-                // retval = system(cmd);
-                // fprintf(stdout, "Return status value for '%s': %d\n",
-                //         cmd, retval);
-
                 /* fork() + exec() + wait() */
                 pid = fork();
                 if (pid == 0) {
                         /* Child */
                         /* Setup for Output Redirection */
                         if (c1.meta_char) {
-                        dup2(fd, STDOUT_FILENO);
-                        execvp(c1.command1, args);
-                        close(fd);
+                                dup2(fd, STDOUT_FILENO);
+                                execvp(c1.command1, args);
+                                close(fd);
                         } else {
                                 execvp(c1.command1, args);
                         }
@@ -147,4 +158,13 @@ int main(void)
         }
 
         return EXIT_SUCCESS;
+}
+
+int redirect_out(char *command){
+        char* meta_char;
+        meta_char = strchr(command, '>');
+        if (meta_char) {
+                return 1;
+        }
+        return 0;
 }
