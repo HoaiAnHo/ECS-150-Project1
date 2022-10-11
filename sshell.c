@@ -11,6 +11,10 @@ struct cmd_line {
         char *arg1;
         char *meta_char;
         char *o_filename;
+        
+};
+struct full_cmds {
+        char *raw_cmd;
 };
 int main(void)
 {
@@ -50,11 +54,61 @@ int main(void)
                         *nl = '\0';
                 }
 
+                // pipe parse test
+                struct full_cmds pipe_cmds[3];
+                char* pipe_check = strchr(cmd, '|');
+                //printf("%s", pi)
+                int pipe_spot = 0;
+                // if symbol found, split into commands
+                char cmd_copy[CMDLINE_MAX];
+                strcpy(cmd_copy, cmd);
+                if (pipe_check)
+                {
+                        char* token;
+                        token = strtok(cmd_copy, "|");
+
+                        
+                        while (token != NULL) {
+                                while (token[0] == ' ') {
+                                        token++;
+                                }
+                                pipe_cmds[pipe_spot].raw_cmd = token;
+                                printf("%s\n", pipe_cmds[pipe_spot].raw_cmd);
+                                pipe_spot++;
+                                token = strtok(NULL, "|");
+                        }
+                }
+                if (pipe_spot == 0) {
+                        pipe_cmds[pipe_spot].raw_cmd = cmd;
+                        printf("%s\n", pipe_cmds[pipe_spot].raw_cmd);
+                        pipe_spot++;
+                }
+                
+                if (pipe_spot == 2) {
+                        int filedesc[2];
+                        pipe(filedesc);
+                        if (fork() != 0) {
+                                close(filedesc[0]);
+                                dup2(filedesc[1], STDOUT_FILENO);
+                                close(filedesc[1]);
+                                *cmd = pipe_cmds[0].raw_cmd;
+                        }
+                        else {
+                                close(filedesc[1]);
+                                dup2(filedesc[0], STDIN_FILENO);
+                                close(filedesc[0]);
+                                //exec(pipe_cmds[1]);
+                                *cmd = pipe_cmds[1].raw_cmd;
+                        }
+
+                }
+
                 struct cmd_line c1;
 
                 /* Parse for arguments */
                 /* first argument */
                 command_copy = strdup(cmd);
+                // with pipe process, check if any leading white spaces for command
                 c1.arg1 = strchr(command_copy,' ');
 
                 /* extracts the space from the argument */
@@ -70,6 +124,7 @@ int main(void)
 
                 /* Command */
                 c1.command1 = strtok(cmd, " ");
+
 
                 /* Exclude Output Redirection from Arguments */
                 if (c1.meta_char) {
