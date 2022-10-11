@@ -30,6 +30,7 @@ int main(void)
                 //char *parse_arg = NULL;
                 //char *full_cmd;
                 pid_t pid;
+                pid_t pipe_id;
                 char cwd_buffer[256];
                 int fd;
                 //char *args[] = {arg1, NULL};
@@ -73,43 +74,55 @@ int main(void)
                                         token++;
                                 }
                                 pipe_cmds[pipe_spot].raw_cmd = token;
-                                printf("%s\n", pipe_cmds[pipe_spot].raw_cmd);
                                 pipe_spot++;
                                 token = strtok(NULL, "|");
                         }
                 }
                 if (pipe_spot == 0) {
                         pipe_cmds[pipe_spot].raw_cmd = cmd;
-                        printf("%s\n", pipe_cmds[pipe_spot].raw_cmd);
                         pipe_spot++;
                 }
+                pipe_spot--;
                 
-                if (pipe_spot == 2) {
+                if (pipe_spot == 1) {
                         int filedesc[2];
                         pipe(filedesc);
-                        if (fork() != 0) {
+                        pipe_id = fork();
+                        //pipe_id = fork();
+                        //parent
+                        if (pipe_id > 0) {
+                                //printf("#1%i\n", pipe_id);
+                                int pipe_status;
+                                waitpid(pipe_id, &pipe_status, 0);
                                 close(filedesc[0]);
                                 dup2(filedesc[1], STDOUT_FILENO);
                                 close(filedesc[1]);
-                                *cmd = pipe_cmds[0].raw_cmd;
+                                printf("parent\n");
+                                pipe_spot = 1;
                         }
-                        else {
+                        //child 1?
+                        else if (pipe_id == 0) {
                                 close(filedesc[1]);
                                 dup2(filedesc[0], STDIN_FILENO);
                                 close(filedesc[0]);
-                                //exec(pipe_cmds[1]);
-                                *cmd = pipe_cmds[1].raw_cmd;
+                                printf("child\n");
+                                pipe_spot = 0;
                         }
-
                 }
+
+                char* cur_cmd = pipe_cmds[pipe_spot].raw_cmd;
+                printf("%s\n", cur_cmd);
+
+
 
                 struct cmd_line c1;
 
                 /* Parse for arguments */
                 /* first argument */
-                command_copy = strdup(cmd);
+                command_copy = strdup(cur_cmd);
                 // with pipe process, check if any leading white spaces for command
                 c1.arg1 = strchr(command_copy,' ');
+
 
                 /* extracts the space from the argument */
                 if (c1.arg1) {
@@ -123,7 +136,7 @@ int main(void)
                 //printf("meta_char: %s ", c1.meta_char);
 
                 /* Command */
-                c1.command1 = strtok(cmd, " ");
+                c1.command1 = strtok(cur_cmd, " ");
 
 
                 /* Exclude Output Redirection from Arguments */
@@ -155,7 +168,7 @@ int main(void)
 
                 /* Builtin command */
                 /* Exit */
-                if (!strcmp(cmd, "exit")) {
+                if (!strcmp(cur_cmd, "exit")) {
                         fprintf(stderr, "Bye...\n");
                         break;
                 }
@@ -166,7 +179,7 @@ int main(void)
                 }
 
                 /* pwd */
-                if (!strcmp(cmd, "pwd")){
+                if (!strcmp(cur_cmd, "pwd")){
                         getcwd(cwd_buffer, 256);
                 }
 
@@ -181,9 +194,9 @@ int main(void)
                         /* Child */
                         /* Setup for Output Redirection */
                         if (c1.meta_char) {
-                        dup2(fd, STDOUT_FILENO);
-                        execvp(c1.command1, args);
-                        close(fd);
+                                dup2(fd, STDOUT_FILENO);
+                                execvp(c1.command1, args);
+                                close(fd);
                         } else {
                                 execvp(c1.command1, args);
                         }
