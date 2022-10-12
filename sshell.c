@@ -17,6 +17,7 @@ struct cmd_line {
 int redirect_out(char *command);
 int redirect_in(char *command);
 
+
 int main(void)
 {
         char cmd[CMDLINE_MAX];
