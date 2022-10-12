@@ -16,6 +16,9 @@ struct cmd_line {
 struct full_cmds {
         char *raw_cmd;
 };
+int redirect_out(char *command);
+int redirect_in(char *command);
+
 int main(void)
 {
         char cmd[CMDLINE_MAX];
@@ -23,13 +26,13 @@ int main(void)
         while (1) {
                 char *nl;
                 //int retval;
-                //char *arg1;
-                //char *arg2 = "";
-                //char *command1;
+                int built_in = 0; //flag for built in function
                 char *command_copy;
                 //char *parse_arg = NULL;
                 //char *full_cmd;
                 pid_t pid;
+                char *dir;
+                int complete;
                 pid_t pipe_id;
                 char cwd_buffer[256];
                 int fd;
@@ -58,7 +61,6 @@ int main(void)
                 // pipe parse test
                 struct full_cmds pipe_cmds[3];
                 char* pipe_check = strchr(cmd, '|');
-                //printf("%s", pi)
                 int pipe_spot = 0;
                 // if symbol found, split into commands
                 char cmd_copy[CMDLINE_MAX];
@@ -67,8 +69,6 @@ int main(void)
                 {
                         char* token;
                         token = strtok(cmd_copy, "|");
-
-                        
                         while (token != NULL) {
                                 while (token[0] == ' ') {
                                         token++;
@@ -78,104 +78,57 @@ int main(void)
                                 token = strtok(NULL, "|");
                         }
                 }
+                // if not a pipeline command, put whole command into the 1st array element
                 if (pipe_spot == 0) {
                         pipe_cmds[pipe_spot].raw_cmd = cmd;
                         pipe_spot++;
                 }
                 pipe_spot--;
                 
+                // if pipeline, initiate forks
                 if (pipe_spot == 1) {
                         int filedesc[2];
                         pipe(filedesc);
                         pipe_id = fork();
+                        fork();
                         //pipe_id = fork();
                         //parent
                         if (pipe_id > 0) {
-                                //printf("#1%i\n", pipe_id);
-                                int pipe_status;
-                                waitpid(pipe_id, &pipe_status, 0);
                                 close(filedesc[0]);
                                 dup2(filedesc[1], STDOUT_FILENO);
                                 close(filedesc[1]);
-                                printf("parent\n");
-                                pipe_spot = 1;
+                                pipe_spot = 0;
                         }
                         //child 1?
-                        else if (pipe_id == 0) {
+                        else{
                                 close(filedesc[1]);
                                 dup2(filedesc[0], STDIN_FILENO);
                                 close(filedesc[0]);
-                                printf("child\n");
-                                pipe_spot = 0;
+                                pipe_spot = 1;
                         }
                 }
 
+                // current raw command for the rest of operations
                 char* cur_cmd = pipe_cmds[pipe_spot].raw_cmd;
                 printf("%s\n", cur_cmd);
-
-
-
-                struct cmd_line c1;
-
-                /* Parse for arguments */
-                /* first argument */
-                command_copy = strdup(cur_cmd);
-                // with pipe process, check if any leading white spaces for command
-                c1.arg1 = strchr(command_copy,' ');
-
-
-                /* extracts the space from the argument */
-                if (c1.arg1) {
-                        c1.arg1++;
-                        while (c1.arg1[0] == ' ' && c1.arg1 != NULL) {
-                                c1.arg1++;
-                        }
-                        /* Check for Output Redirection */
-                        c1.meta_char = strchr(c1.arg1, '>');
-                }
-                //printf("meta_char: %s ", c1.meta_char);
-
-                /* Command */
-                c1.command1 = strtok(cur_cmd, " ");
-
-
-                /* Exclude Output Redirection from Arguments */
-                if (c1.meta_char) {
-                        c1.o_filename = c1.meta_char;
-                        while(c1.o_filename[0] == '>') {
-                                c1.o_filename++;
-                        }
-                        //printf("filename: %s", c1.o_filename);
-                        fd = open(c1.o_filename,O_WRONLY | O_CREAT, 0644);
-                        //printf("arg1: %s ", c1.arg1);
-                        c1.arg1 = strtok(c1.arg1,">");
-                        //printf("arg1: %s ", c1.arg1);
-                        c1.arg1 = strtok(c1.arg1," ");
-                        // if (strcmp(c1.command1, "echo")) {
-                        //         c1.arg1 = strtok(c1.arg1," ");
-                        // }
-                        //c1.arg1 = strtok(c1.arg1," ");
-                        // if (c1.arg1[0] == ' ') {
-                        //         c1.arg1 = NULL;
-                        // } else {
-                        //         c1.arg1 = strtok(c1.arg1," ");
-                        // }
-                        // printf("arg2: %s ", c1.arg1);
-                }
-
-                char *args[] = {c1.command1, c1.arg1, NULL};
-
 
                 /* Builtin command */
                 /* Exit */
                 if (!strcmp(cur_cmd, "exit")) {
                         fprintf(stderr, "Bye...\n");
+                        fprintf(stderr, "+ completed '%s' [%d]\n", cur_cmd, EXIT_SUCCESS);
                         break;
                 }
 
                 /* cd */
-                if (!strcmp(c1.command1, "cd")) {
-                        chdir(c1.arg1);
+                if (!strncmp(cur_cmd, "cd", 2)) {
+                        built_in = 1;
+                        dir = strchr(cur_cmd, ' ');
+                        if (dir[0] == ' ') {
+                                dir++;
+                        }
+                        complete = chdir(dir);
+                        fprintf(stderr, "+ completed '%s' [ %d ]\n", cur_cmd, WEXITSTATUS(complete));
                 }
 
                 /* pwd */
@@ -183,36 +136,120 @@ int main(void)
                         getcwd(cwd_buffer, 256);
                 }
 
+
+
+                struct cmd_line c1;
+
+                /* Check for Output Redirection */
+                c1.meta_char_out = redirect_out(cur_cmd);
+
+                /* Check for Input Redirection */
+                c1.meta_char_in = redirect_in(cur_cmd);
+
+                /* Parse for arguments */
+                /* first argument */
+                command_copy = strdup(cur_cmd);
+                c1.arg1 = strchr(command_copy,' ');
+
+                /* extracts the space from the argument */
+                if (c1.arg1) {
+                        c1.arg1++;
+                        while (c1.arg1[0] == ' ' && c1.arg1 != NULL) {
+                                c1.arg1++;
+                        }
+                }
+                //printf("meta_char: %s ", c1.meta_char);
+
+                /* Command */
+                c1.command1 = strtok(cur_cmd, " ");
+                //printf("command: %s", c1.command1);
+                
+
+                /* Get FileName */
+                if (c1.meta_char_out) {
+                        c1.o_filename = strchr(command_copy, '>');
+                        //printf("file name: %s", c1.o_filename);
+                        while(c1.o_filename[0] == '>' || c1.o_filename[0] == ' ') {
+                                c1.o_filename++;
+                        }
+                        //printf("filename: %s", c1.o_filename);
+                        fd = open(c1.o_filename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                }
+
+                /* Clean up Argument */
+                //printf("arg: %s\n", c1.arg1);
+                if (c1.meta_char_out) {
+                        if(!c1.arg1){
+                                //still doesn't really work
+                                c1.command1 = strtok(cur_cmd, ">");
+                                printf("parsed command: %s", c1.command1);
+                                c1.arg1 = NULL;
+                        } else {
+                                c1.arg1 = strtok(c1.arg1, ">");
+                                //printf("new arg: %s\n", c1.arg1);
+                                if (c1.arg1 == c1.o_filename) {
+                                        c1.arg1 = NULL;
+                                        //printf("arg1: %s\n", c1.arg1);
+                                }
+                        }
+                }
+                
+                /* special case */
+                        if (strcmp(c1.command1, "echo") != 0) {
+                                c1.arg1 = strtok(c1.arg1," ");
+                        }
+
+                char *args[] = {c1.command1, c1.arg1, NULL};
+
                 /* Regular command */
                 // retval = system(cmd);
                 // fprintf(stdout, "Return status value for '%s': %d\n",
                 //         cmd, retval);
 
                 /* fork() + exec() + wait() */
-                pid = fork();
-                if (pid == 0) {
-                        /* Child */
-                        /* Setup for Output Redirection */
-                        if (c1.meta_char) {
-                                dup2(fd, STDOUT_FILENO);
-                                execvp(c1.command1, args);
-                                close(fd);
+                if (built_in == 0) {
+                        pid = fork();
+                        if (pid == 0) {
+                                /* Child */
+                                /* Setup for Output Redirection */
+                                if (c1.meta_char_out) {
+                                        dup2(fd, STDOUT_FILENO);
+                                        execvp(c1.command1, args);
+                                        close(fd);
+                                } else {
+                                        execvp(c1.command1, args);
+                                }
+                                perror("execv");
+                                exit(1);
+                        } else if (pid > 0) {
+                                /* Parent */
+                                int status;
+                                waitpid(pid, &status, 0);
+                                //printf( "Return status value for '%s' : %d\n", bin, WEXITSTATUS(status));
+                                fprintf(stderr, "+ completed '%s' [%d]\n", command_copy, WEXITSTATUS(status));
                         } else {
-                                execvp(c1.command1, args);
+                                perror("fork");
+                                exit(1);
                         }
-                        perror("execv");
-                        exit(1);
-                } else if (pid > 0) {
-                        /* Parent */
-                        int status;
-                        waitpid(pid, &status, 0);
-                        //printf( "Return status value for '%s' : %d\n", bin, WEXITSTATUS(status));
-                        fprintf(stderr, "+ completed '%s' [ %d ]\n", command_copy, WEXITSTATUS(status));
-                } else {
-                        perror("fork");
-                        exit(1);
                 }
         }
 
         return EXIT_SUCCESS;
+}
+
+int redirect_out(char *command){
+        char* meta_char;
+        meta_char = strchr(command, '>');
+        if (meta_char) {
+                return 1;
+        }
+        return 0;
+}
+int redirect_in(char *command){
+        char* meta_char;
+        meta_char = strchr(command, '<');
+        if (meta_char) {
+                return 1;
+        }
+        return 0;
 }
