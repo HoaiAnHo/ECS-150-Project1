@@ -60,7 +60,7 @@ int main(void)
                 /* Exit */
                 if (!strcmp(cmd, "exit")) {
                         fprintf(stderr, "Bye...\n");
-                        fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, EXIT_SUCCESS);
+                        fprintf(stderr, "+ completed '%s' [%d]\n", cmd, EXIT_SUCCESS);
                         break;
                 }
 
@@ -120,7 +120,7 @@ int main(void)
                 }
 
                 /* Clean up Argument */
-                printf("arg: %s\n", c1.arg1);
+                //printf("arg: %s\n", c1.arg1);
                 if (c1.meta_char_out) {
                         if(!c1.arg1){
                                 //still doesn't really work
