@@ -23,13 +23,10 @@ struct cmd_line {
 // }; 
 // typedef struct stack s1;
 
-//int top = -1;
 char *stack_dir[SIZE];
 int top = -1;
 
 /* Function Prototypes */
-// int redirect_out(char *command);
-// int redirect_in(char *command);
 int checkRedirect(char *command, char direction);
 void removeSpace(char *command_line);
 //void get_filename(char* filename, char *command, char delimiter);
@@ -38,7 +35,9 @@ void removeSpace(char *command_line);
 // int pop(char* dir_stack[], int *index);
 // int isEmpty(int *index);
 // int print(char* dir_stack[], int *index);
-void push(char* directory);
+void cd(char *command);
+void pwd(char *command);
+void push(char *directory);
 int pop();
 int isEmpty();
 int print();
@@ -63,7 +62,7 @@ int main(void)
                 //char *command2;
                 //char *pipe_cmd;
                 char *command_copy;
-                char *working_dir;
+                //char *working_dir;
                 char *dir;
                 int complete;
                 pid_t pid;
@@ -101,22 +100,12 @@ int main(void)
                 /* cd */
                 if (!strncmp(cmd, "cd", 2)) {
                         built_in = 1;
-                        dir = strchr(cmd, ' ');
-                        if (dir[0] == ' ') {
-                                dir++;
-                        }
-                        complete = chdir(dir);
-                        fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
+                        cd(cmd);
                 }
                 /* pwd */
                 if (!strcmp(cmd, "pwd")){
                         built_in = 1;
-                        working_dir = getcwd(cwd_buffer, 256);
-                        if (working_dir) {
-                                printf("%s\n", working_dir);
-                                complete = 0;
-                                fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
-                        }
+                        pwd(cmd);
                 }
 
                 /* Directory Stack */
@@ -162,30 +151,13 @@ int main(void)
                         fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
                 }
 
-
                 struct cmd_line c1;
 
                 /* Check for Output Redirection */
-                //printf("%d", c1.meta_char_out);
                 c1.meta_char_out = checkRedirect(cmd, '>');
 
                 /* Check for Input Redirection */
                 c1.meta_char_in = checkRedirect(cmd, '<');
-
-                /* Check for Pipeline */
-                // check_pipe = strchr(cmd, '|');
-                // if (check_pipe) {
-                //         pipe_cmd = strdup(cmd);
-                //         command2 = strchr(cmd, '|');
-                //         command1 = strtok(pipe_cmd, "|");
-                //         printf("pipe cmd 1 : %s \n", command1);
-                //         printf("pipe cmd 2 : %s \n", command2);
-                // }
-
-                /* extract space from arg */
-                // if (command1) {
-                // }
-
 
                 /* Parse for arguments */
                 /* first argument */
@@ -245,7 +217,7 @@ int main(void)
                         removeSpace (c1.arg1);
                 }
 
-                        /* special case */
+                /* special case */
                 if (strcmp(c1.command1, "echo") != 0) {
                         c1.arg1 = strtok(c1.arg1," ");
                 }
@@ -309,6 +281,28 @@ void removeSpace(char *command_line) {
                 command_line[index] = '\0';
                 index--;
         }
+}
+void cd(char *command) {
+        char *dir;
+        int complete;
+        dir = strchr(command, ' ');
+        if (dir[0] == ' ') {
+                dir++;
+        }
+        complete = chdir(dir);
+        fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
+}
+void pwd(char *command) {
+        char *working_dir;
+        char cwd_buffer[256];
+        int complete;
+        working_dir = getcwd(cwd_buffer, 256);
+        if (working_dir) {
+                printf("%s\n", working_dir);
+                complete = 0;
+                fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
+        }
+
 }
 // void get_filename(char* filename, char *command, char delimiter) {
 //                 filename = strchr(command, delimiter);
