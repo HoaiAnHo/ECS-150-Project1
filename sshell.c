@@ -22,7 +22,6 @@ struct stack {
         int top;
 }; 
 typedef struct stack s1;
-s1 *stackDir;
 
 /* Function Prototypes */
 int checkRedirect(char *command, char direction);
@@ -34,16 +33,13 @@ void push(s1 *dirStack, char* directory);
 int pop(s1 *dirStack);
 int isEmpty(s1 *dirStack);
 int print(s1 *dirStack);
-//void dirs(s1 dirStack, char *command); 
-// void pushd();
-// void popd();
 
 
 int main(void)
 {
         char cmd[CMDLINE_MAX];
-        stackDir = (s1*)malloc(sizeof(s1));
-        newStack(stackDir);
+        s1 stackDir;
+        newStack(&stackDir);
 
         while (1) {
                 char *nl;
@@ -99,13 +95,12 @@ int main(void)
                 /* dirs */
                 if (!strcmp(cmd, "dirs")) {
                         builtIn = 1;
-                        if (isEmpty(stackDir)){
+                        if (isEmpty(&stackDir)){
                                 getcwd(cwdBuffer, 256);
-                                push(stackDir, cwdBuffer);
+                                push(&stackDir, cwdBuffer);
                         }
-                        complete = print(stackDir);
+                        complete = print(&stackDir);
                         fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
-                        //dirs(&stackDir, cmd);
                 }
 
                 /* pushd */
@@ -115,11 +110,10 @@ int main(void)
                         if (dir[0] == ' ') {
                                 dir++;
                         }
-                        printf("directory: %s\n", dir);
                         complete = chdir(dir);
                         if (!complete) {
                                 getcwd(cwdBuffer, 256);
-                                push(stackDir, cwdBuffer);
+                                push(&stackDir, cwdBuffer);
                         } else {
                                 fprintf(stderr, "Error: no such directory\n");
                         }
@@ -129,11 +123,11 @@ int main(void)
                 /* popd */
                 if (!strcmp(cmd, "popd")) {
                         builtIn = 1;
-                        if (isEmpty(stackDir)) {
+                        if (isEmpty(&stackDir)) {
                                 fprintf(stderr, "Error: directory stack empty\n");
                                 complete = 1;
                         } else {
-                                complete = pop(stackDir);
+                                complete = pop(&stackDir);
                                 chdir("..");
                         }
                         fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
@@ -159,6 +153,8 @@ int main(void)
 
                 /* Command */
                 c1.command1 = strtok(cmd, " ");
+
+                /* Error Checking */
                 if (c1.command1 == NULL) {
                         fprintf(stderr, "Error: missing command\n");
                 }
@@ -192,7 +188,6 @@ int main(void)
                 /* Clean up Argument if File Output */
                 if (c1.metaCharOut) {
                         if(!c1.arg1){
-                                //still doesn't really work ??
                                 c1.command1 = strtok(cmd, ">");
                                 printf("parsed command: %s", c1.command1);
                                 c1.arg1 = NULL;
@@ -201,7 +196,6 @@ int main(void)
                                 removeSpace(c1.arg1);
                                 if (c1.arg1 == c1.oFilename) {
                                         c1.arg1 = NULL;
-                                        //printf("arg1: %s\n", c1.arg1);
                                 }
                         }
                 }
@@ -236,7 +230,6 @@ int main(void)
                                 } else {
                                         execvp(c1.command1, args);
                                 }
-                                // perror("execv");
                                 fprintf(stderr, "Error: Command not found");
                                 exit(1);
                         } else if (pid > 0) {
@@ -301,18 +294,9 @@ void newStack(s1 *dirStack) {
         dirStack->top = -1;
         dirStack->size = 0;
 }
-// void get_filename(char* filename, char *command, char delimiter) {
-//                 filename = strchr(command, delimiter);
-//                 //printf("file name: %s", c1.o_filename);
-//                 if (filename[0] == '>'){
-//                         filename++;
-//                 }
-//                 //remove_space(filename);
-//                 //printf("file name: %s", filename);
-// }
 void push(s1 *dirStack, char* directory) {
-        //++dirStack->top;
-        dirStack->directory[++dirStack->top] = directory;
+        ++dirStack->top;
+        dirStack->directory[dirStack->top] = directory;
 }
 int pop(s1 *dirStack) {
         dirStack->directory[dirStack->top] = NULL;
@@ -328,16 +312,6 @@ int isEmpty(s1 *dirStack) {
 int print(s1 *dirStack) {
         for (int i = dirStack->top; i >= 0; --i) {
                 printf("%s\n", dirStack->directory[i]);
-                //printf("i: %d\n", i);
         }
         return 0;
 }
-// void dirs(s1 dirStack, char *command) {
-//         char cwd_buffer[256];
-//         if (isEmpty(dirStack)){
-//                 getcwd(cwd_buffer, 256);
-//                 push(&dirStack, cwd_buffer);
-//         }
-//         int complete = print(&dirStack);
-//         fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
-// }
