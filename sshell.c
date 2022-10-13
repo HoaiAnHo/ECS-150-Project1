@@ -171,7 +171,7 @@ int main(void)
                                 exit(1);
                         }
                         //true parent
-                        else if (pid > 0){
+                        else if (pid_2 > 0){
                                 int new_status;
                                 if (pipe_amount == 2) {
                                         waitpid(pid_2, &new_status, 0);
