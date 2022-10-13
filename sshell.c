@@ -276,10 +276,16 @@ void cd(char *command) {
         char *dir;
         int complete;
         dir = strchr(command, ' ');
-        if (dir[0] == ' ') {
+        while(dir[0] == ' ') {
+                if (dir[0] == ' ') {
                 dir++;
+                }
         }
+        printf("directory: %s", dir);
         complete = chdir(dir);
+        if (complete != 0) {
+               fprintf(stderr, "Error: cannot cd into directory"); 
+        }
         fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
 }
 void pwd(char *command) {
