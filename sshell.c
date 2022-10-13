@@ -133,13 +133,21 @@ int main(void)
                 // fork within loop
                 // for each command regardless of pipes, fork
                 int filedesc[2];
-                pipe(filedesc);
+                if (pipe_amount > 1) {
+                        pipe(filedesc);
+                }
+                else {
+                        close(filedesc[0]);
+                        close(filedesc[1]);
+                }
                 pid_t pid = fork();
                 // if child 1
                 if (pid == 0) {
-                        close(filedesc[0]);
-                        dup2(filedesc[1], STDOUT_FILENO);
-                        close(filedesc[1]);
+                        if (pipe_amount > 1){
+                                close(filedesc[0]);
+                                dup2(filedesc[1], STDOUT_FILENO);
+                                close(filedesc[1]);
+                        }
                         char *args[] = {pipe_cmds[0].command1, pipe_cmds[0].arg1, NULL};
                         if (pipe_cmds[0].meta_char) {
                                 dup2(fd, STDOUT_FILENO);
@@ -156,16 +164,18 @@ int main(void)
                 else if (pid > 0) {
                         int status;
                         waitpid(pid, &status, 0);
-                        pid_t pid_2 = 1; 
-                        if (pipe_amount == 2) pid_2 = fork();
+                        pid_t pid_2; 
+                        if (pipe_amount > 1) pid_2 = fork();
+                        else goto gohome;
                         if (pid_2 == 0){
                                 // if child 2
                                 close(filedesc[1]);
                                 dup2(filedesc[0], STDIN_FILENO);
                                 close(filedesc[0]);
+                                printf("file 0 %d\n", filedesc[0]);
+                                printf("file 1 %d\n", filedesc[1]);
                                 char *args2[] = {pipe_cmds[1].command1, pipe_cmds[1].arg1, NULL};
-                                int ret = execvp(pipe_cmds[1].command1, args2);
-                                printf("%d\n", ret);
+                                execvp(pipe_cmds[1].command1, args2);
                                 //where file goes poof
                                 perror("execvp");
                                 exit(1);
@@ -177,10 +187,13 @@ int main(void)
                                         waitpid(pid_2, &new_status, 0);
                                 }
                                 else {
+                                        gohome:
                                         new_status = status;
+                                        fprintf(stderr, "+ completed '%s' [%d]\n", command_copy, WEXITSTATUS(new_status));
                                 }
-                                if (pipe_amount == 1) fprintf(stderr, "+ completed '%s' [%d]\n", command_copy, WEXITSTATUS(new_status));
-                                else fprintf(stderr, "+ completed '%s' [%d][%d]\n", command_copy, WEXITSTATUS(status), WEXITSTATUS(new_status));
+                                if (pipe_amount == 2){
+                                        fprintf(stderr, "+ completed '%s' [%d][%d]\n", command_copy, WEXITSTATUS(status), WEXITSTATUS(new_status));
+                                }
                         }
                         else {
                                 perror("fork");
@@ -191,32 +204,6 @@ int main(void)
                         perror("fork");
                         exit(1);
                 }
-
-                // char *args[] = {pipe_cmds[0].command1, pipe_cmds[0].arg1, NULL};
-
-                // /* fork() + exec() + wait() */
-                // pid = fork();
-                // if (pid == 0) {
-                //         /* Child */
-                //         /* Setup for Output Redirection */
-                //         if (pipe_cmds[0].meta_char) {
-                //                 dup2(fd, STDOUT_FILENO);
-                //                 execvp(pipe_cmds[0].command1, args);
-                //                 close(fd);
-                //         } else {
-                //                 execvp(pipe_cmds[0].command1, args);
-                //         }
-                //         perror("execv");
-                //         exit(1);
-                // } else if (pid > 0) {
-                //         /* Parent */
-                //         int status;
-                //         waitpid(pid, &status, 0);
-                //         fprintf(stderr, "+ completed '%s' [%d]\n", command_copy, WEXITSTATUS(status));
-                // } else {
-                //         perror("fork");
-                //         exit(1);
-                // }
         }
         return EXIT_SUCCESS;
 }
