@@ -226,10 +226,12 @@ int main(void)
                                         dup2(fdOut, STDOUT_FILENO);
                                         execvp(c1.command1, args);
                                         close(fdOut);
+                                        c1.metaCharOut = 0;
                                 } else if (c1.metaCharIn) {
                                         dup2(fdIn, STDIN_FILENO);
                                         execvp(c1.command1, args);
                                         close(fdIn);
+                                        c1.metaCharIn = 0;
                                 } else {
                                         execvp(c1.command1, args);
                                 }
