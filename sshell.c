@@ -170,7 +170,7 @@ int main(void)
                         if (c1.oFilename == NULL) {
                                 fprintf(stderr, "Error: no output file\n");
                         }
-                        fdOut = open(c1.oFilename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        //fdOut = open(c1.oFilename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 }
 
                 /* Get Input FileName */
@@ -181,11 +181,11 @@ int main(void)
                         if (c1.inFilename == NULL) {
                                 fprintf(stderr, "Error: no input file\n");
                         }
-                        fdIn = open(c1.inFilename, O_RDONLY, 0644);
-                        if (fdIn == -1) {
-                                fprintf(stderr, "Error: cannot open input file\n");
-                                builtIn = 1;
-                        }
+                        // fdIn = open(c1.inFilename, O_RDONLY, 0644);
+                        // if (fdIn == -1) {
+                        //         fprintf(stderr, "Error: cannot open input file\n");
+                        //         builtIn = 1;
+                        // }
                 }
 
                 /* Clean up Argument if File Output */
@@ -223,11 +223,17 @@ int main(void)
                                 /* Child */
                                 /* Setup for Output Redirection */
                                 if (c1.metaCharOut) {
+                                        fdOut = open(c1.oFilename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
                                         dup2(fdOut, STDOUT_FILENO);
                                         execvp(c1.command1, args);
                                         close(fdOut);
                                         c1.metaCharOut = 0;
                                 } else if (c1.metaCharIn) {
+                                        fdIn = open(c1.inFilename, O_RDONLY, 0644);
+                                        if (fdIn == -1) {
+                                                fprintf(stderr, "Error: cannot open input file\n");
+                                                break;
+                                        }
                                         dup2(fdIn, STDIN_FILENO);
                                         execvp(c1.command1, args);
                                         close(fdIn);
@@ -293,7 +299,7 @@ void pwd(char *command) {
         char cwdBuffer[512];
         int complete;
         getcwd(cwdBuffer, sizeof(cwdBuffer));
-        printf("%s \n", cwdBuffer);
+        printf("%s\n", cwdBuffer);
         complete = 0;
         fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
 }
