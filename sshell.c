@@ -11,65 +11,50 @@
 struct cmd_line {
         char *command1;
         char *arg1;
-        int meta_char_out;
-        int meta_char_in;
-        char *o_filename;
-        char *in_filename;
+        int metaCharOut;
+        int metaCharIn;
+        char *oFilename;
+        char *inFilename;
 };
-// struct stack {
-//         char *directory[100];
-//         int size;
-//         //int top;
-// }; 
-// typedef struct stack s1;
-
-char *stack_dir[SIZE];
-int top = -1;
+struct stack {
+        char *directory[SIZE];
+        int size;
+        int top;
+}; 
+typedef struct stack s1;
+s1 *stackDir;
 
 /* Function Prototypes */
 int checkRedirect(char *command, char direction);
-void removeSpace(char *command_line);
-//void get_filename(char* filename, char *command, char delimiter);
-//void newStack(s1 stackDir);
-// void push(char* dir_stack[], char* dir, int *index);
-// int pop(char* dir_stack[], int *index);
-// int isEmpty(int *index);
-// int print(char* dir_stack[], int *index);
+void removeSpace(char *commandLine);
 void cd(char *command);
 void pwd(char *command);
-void push(char *directory);
-int pop();
-int isEmpty();
-int print();
+void newStack(s1 *dirStack);
+void push(s1 *dirStack, char* directory);
+int pop(s1 *dirStack);
+int isEmpty(s1 *dirStack);
+int print(s1 *dirStack);
+//void dirs(s1 dirStack, char *command); 
+// void pushd();
+// void popd();
 
 
 int main(void)
 {
         char cmd[CMDLINE_MAX];
-        // s1 *dir_stack = (s1*)malloc(sizeof(s1));
-        // dir_stack->size = -1;
-        // //dir_stack->top = -1;
-        // int top = -1;
+        stackDir = (s1*)malloc(sizeof(s1));
+        newStack(stackDir);
 
         while (1) {
                 char *nl;
-                int built_in = 0; //flag for built in function
-                //char *check_pipe;
-                //char *arg1;
-                //char *arg2 = "";
-                //int index = 0;
-                //char *command1 = NULL;
-                //char *command2;
-                //char *pipe_cmd;
-                char *command_copy;
-                //char *working_dir;
+                int builtIn = 0;
+                char *commandCopy;
                 char *dir;
                 int complete;
                 pid_t pid;
-                char cwd_buffer[256];
-                int fd_out;
-                int fd_in;
-
+                char cwdBuffer[256];
+                int fdOut;
+                int fdIn;
 
                 /* Print prompt */
                 printf("sshell$@ucd ");
@@ -97,33 +82,35 @@ int main(void)
                         fprintf(stderr, "+ completed '%s' [%d]\n", cmd, EXIT_SUCCESS);
                         break;
                 }
+
                 /* cd */
                 if (!strncmp(cmd, "cd", 2)) {
-                        built_in = 1;
+                        builtIn = 1;
                         cd(cmd);
                 }
+
                 /* pwd */
                 if (!strcmp(cmd, "pwd")){
-                        built_in = 1;
+                        builtIn = 1;
                         pwd(cmd);
                 }
 
                 /* Directory Stack */
                 /* dirs */
                 if (!strcmp(cmd, "dirs")) {
-                        built_in = 1;
-                        if (isEmpty()){
-                                getcwd(cwd_buffer, 256);
-                                //push(stack_dir, cwd_buffer, &top);
-                                push(cwd_buffer);
+                        builtIn = 1;
+                        if (isEmpty(stackDir)){
+                                getcwd(cwdBuffer, 256);
+                                push(stackDir, cwdBuffer);
                         }
-                        complete = print();
+                        complete = print(stackDir);
                         fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
+                        //dirs(&stackDir, cmd);
                 }
 
                 /* pushd */
                 if (!strncmp(cmd, "pushd", 5)) {
-                        built_in = 1;
+                        builtIn = 1;
                         dir = strchr(cmd, ' ');
                         if (dir[0] == ' ') {
                                 dir++;
@@ -131,8 +118,8 @@ int main(void)
                         printf("directory: %s\n", dir);
                         complete = chdir(dir);
                         if (!complete) {
-                                getcwd(cwd_buffer, 256);
-                                push(cwd_buffer);
+                                getcwd(cwdBuffer, 256);
+                                push(stackDir, cwdBuffer);
                         } else {
                                 fprintf(stderr, "Error: no such directory\n");
                         }
@@ -141,12 +128,13 @@ int main(void)
 
                 /* popd */
                 if (!strcmp(cmd, "popd")) {
-                        built_in = 1;
-                        if (isEmpty()) {
+                        builtIn = 1;
+                        if (isEmpty(stackDir)) {
                                 fprintf(stderr, "Error: directory stack empty\n");
                                 complete = 1;
                         } else {
-                                complete = pop();
+                                complete = pop(stackDir);
+                                chdir("..");
                         }
                         fprintf(stderr, "+ completed '%s' [ %d ]\n", cmd, WEXITSTATUS(complete));
                 }
@@ -154,15 +142,15 @@ int main(void)
                 struct cmd_line c1;
 
                 /* Check for Output Redirection */
-                c1.meta_char_out = checkRedirect(cmd, '>');
+                c1.metaCharOut = checkRedirect(cmd, '>');
 
                 /* Check for Input Redirection */
-                c1.meta_char_in = checkRedirect(cmd, '<');
+                c1.metaCharIn = checkRedirect(cmd, '<');
 
-                /* Parse for arguments */
+                /* Parse for Arguments */
                 /* first argument */
-                command_copy = strdup(cmd);
-                c1.arg1 = strchr(command_copy,' ');
+                commandCopy = strdup(cmd);
+                c1.arg1 = strchr(commandCopy,' ');
 
                 /* extracts the space from the argument */
                 if (c1.arg1) {
@@ -171,32 +159,38 @@ int main(void)
 
                 /* Command */
                 c1.command1 = strtok(cmd, " ");
+                if (c1.command1 == NULL) {
+                        fprintf(stderr, "Error: missing command\n");
+                }
 
                 /* Get Output FileName */
-                if (c1.meta_char_out) {
-                        c1.o_filename = strchr(command_copy, '>');
-                        c1.o_filename++;
-                        removeSpace(c1.o_filename);
-                        fd_out = open(c1.o_filename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                if (c1.metaCharOut) {
+                        c1.oFilename = strchr(commandCopy, '>');
+                        c1.oFilename++;
+                        removeSpace(c1.oFilename);
+                        if (c1.oFilename == NULL) {
+                                fprintf(stderr, "Error: no output file\n");
+                        }
+                        fdOut = open(c1.oFilename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 }
 
                 /* Get Input FileName */
-                if (c1.meta_char_in) {
-                        c1.in_filename = strrchr(command_copy, '<');
-                        c1.in_filename++;
-                        removeSpace(c1.in_filename);
-                        if (c1.in_filename == NULL) {
+                if (c1.metaCharIn) {
+                        c1.inFilename = strrchr(commandCopy, '<');
+                        c1.inFilename++;
+                        removeSpace(c1.inFilename);
+                        if (c1.inFilename == NULL) {
                                 fprintf(stderr, "Error: no input file\n");
                         }
-                        fd_in = open(c1.in_filename, O_RDONLY, 0644);
-                        if (fd_in == -1) {
+                        fdIn = open(c1.inFilename, O_RDONLY, 0644);
+                        if (fdIn == -1) {
                                 fprintf(stderr, "Error: cannot open input file\n");
-                                built_in = 1;
+                                builtIn = 1;
                         }
                 }
 
-                /* Clean up Argument */
-                if (c1.meta_char_out) {
+                /* Clean up Argument if File Output */
+                if (c1.metaCharOut) {
                         if(!c1.arg1){
                                 //still doesn't really work ??
                                 c1.command1 = strtok(cmd, ">");
@@ -205,51 +199,51 @@ int main(void)
                         } else {
                                 c1.arg1 = strtok(c1.arg1, ">");
                                 removeSpace(c1.arg1);
-                                if (c1.arg1 == c1.o_filename) {
+                                if (c1.arg1 == c1.oFilename) {
                                         c1.arg1 = NULL;
                                         //printf("arg1: %s\n", c1.arg1);
                                 }
                         }
                 }
-                //clean up argument for file input
-                if (c1.meta_char_in) {
+
+                //* Clean up Argument if File Input */
+                if (c1.metaCharIn) {
                         c1.arg1 = strtok(c1.arg1, "<");
                         removeSpace (c1.arg1);
                 }
 
-                /* special case */
+                /* Special Case for Echo */
                 if (strcmp(c1.command1, "echo") != 0) {
                         c1.arg1 = strtok(c1.arg1," ");
                 }
 
                 char *args[] = {c1.command1, c1.arg1, NULL};
 
-
                 /* fork() + exec() + wait() */
-                if (built_in == 0) {
+                if (builtIn == 0) {
                         pid = fork();
                         if (pid == 0) {
                                 /* Child */
                                 /* Setup for Output Redirection */
-                                if (c1.meta_char_out) {
-                                        dup2(fd_out, STDOUT_FILENO);
+                                if (c1.metaCharOut) {
+                                        dup2(fdOut, STDOUT_FILENO);
                                         execvp(c1.command1, args);
-                                        close(fd_out);
-                                } else if (c1.meta_char_in) {
-                                        dup2(fd_in, STDIN_FILENO);
+                                        close(fdOut);
+                                } else if (c1.metaCharIn) {
+                                        dup2(fdIn, STDIN_FILENO);
                                         execvp(c1.command1, args);
-                                        close(fd_in);
+                                        close(fdIn);
                                 } else {
                                         execvp(c1.command1, args);
                                 }
-                                perror("execv");
+                                // perror("execv");
+                                fprintf(stderr, "Error: Command not found");
                                 exit(1);
                         } else if (pid > 0) {
                                 /* Parent */
                                 int status;
                                 waitpid(pid, &status, 0);
-                                //printf( "Return status value for '%s' : %d\n", bin, WEXITSTATUS(status));
-                                fprintf(stderr, "+ completed '%s' [ %d ]\n", command_copy, WEXITSTATUS(status));
+                                fprintf(stderr, "+ completed '%s' [ %d ]\n", commandCopy, WEXITSTATUS(status));
                         } else {
                                 perror("fork");
                                 exit(1);
@@ -262,23 +256,23 @@ int main(void)
 
 /* Function Definitions */
 int checkRedirect(char *command, char direction) {
-        char* meta_char;
-        meta_char = strchr(command, direction);
-        if (meta_char) {
+        char* metaChar;
+        metaChar = strchr(command, direction);
+        if (metaChar) {
                 return 1;
         }
         return 0;
 }
-void removeSpace(char *command_line) {
+void removeSpace(char *commandLine) {
         /* Removes spaces in the front */
-        while(command_line[0] == ' ' && command_line != NULL) {
-                command_line++;
+        while(commandLine[0] == ' ' && commandLine != NULL) {
+                commandLine++;
         }
         /* Removes spaces in the end */
         size_t index;
-        index = strlen(command_line) - 1;
-        while(command_line[index] == ' ' && command_line != NULL) {
-                command_line[index] = '\0';
+        index = strlen(commandLine) - 1;
+        while(commandLine[index] == ' ' && commandLine != NULL) {
+                commandLine[index] = '\0';
                 index--;
         }
 }
@@ -293,16 +287,19 @@ void cd(char *command) {
         fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
 }
 void pwd(char *command) {
-        char *working_dir;
-        char cwd_buffer[256];
+        char *workingDir;
+        char cwdBuffer[256];
         int complete;
-        working_dir = getcwd(cwd_buffer, 256);
-        if (working_dir) {
-                printf("%s\n", working_dir);
+        workingDir = getcwd(cwdBuffer, 256);
+        if (workingDir) {
+                printf("%s\n", workingDir);
                 complete = 0;
                 fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
         }
-
+}
+void newStack(s1 *dirStack) {
+        dirStack->top = -1;
+        dirStack->size = 0;
 }
 // void get_filename(char* filename, char *command, char delimiter) {
 //                 filename = strchr(command, delimiter);
@@ -313,68 +310,34 @@ void pwd(char *command) {
 //                 //remove_space(filename);
 //                 //printf("file name: %s", filename);
 // }
-// void push(char* dir_stack[], char* dir, int *index) {
-//         // printf("top: %d\n", index);
-//         // //stackDir->top++;
-//         // index++;
-//         // //printf("incremented top: %d\n", stackDir->top);
-//         // stackDir->directory[index] = dir;
-//         // printf("directory: %s\n", stackDir->directory[index]);
-//         // //printf("directory: %s\n", stackDir->directory[stackDir->top--]);
-//         // stackDir->size++;
-//         *index++;
-//         dir_stack[*index] = dir;
-//         printf("directory: %s \n", dir_stack[*index]);
-// }
-// int pop(char* dir_stack[], int *index) {
-//         // stackDir->directory[index] = NULL;
-//         // //stackDir->top--;
-//         // index--;
-//         // stackDir->size--;
-//         // return 0;
-//         dir_stack[*index] = NULL;
-//         //index--;
-//         return 0;
-// }
-// int isEmpty(int *index) {
-//         if (*index == -1) {
-//                 return 1;
-//         }
-//         return 0;
-// }
-// int print(char* dir_stack[], int *index) {
-//         //printf("%s",stackDir->directory[stackDir->top]);
-//         //int i = stackDir->top;
-//         // while(i >= 0) {
-//         //         printf("%s\n", stackDir->directory[i]);
-//         //         i--;
-//         // }
-//         // for (int i = index; i >= 0; i--) {
-//                 printf("%s\n", dir_stack[*index]);
-//         //         printf("i: %d\n", i);
-//         // }
-//         return 0;
-// }
-void push(char* directory) {
-        top++;
-        stack_dir[top] = directory;
+void push(s1 *dirStack, char* directory) {
+        //++dirStack->top;
+        dirStack->directory[++dirStack->top] = directory;
 }
-int pop() {
-        stack_dir[top] = NULL;
-        top--;
+int pop(s1 *dirStack) {
+        dirStack->directory[dirStack->top] = NULL;
+        dirStack->top--;
         return 0;
 }
-int isEmpty() {
-        if (top == -1) {
+int isEmpty(s1 *dirStack) {
+        if (dirStack->top == -1) {
                 return 1;
         }
         return 0;
 }
-int print() {
-        int i = top;
-        for (i = top; i > -1; i--) {
-                printf("%s\n", stack_dir[i]);
-                printf("i: %d\n", i);
+int print(s1 *dirStack) {
+        for (int i = dirStack->top; i >= 0; --i) {
+                printf("%s\n", dirStack->directory[i]);
+                //printf("i: %d\n", i);
         }
         return 0;
 }
+// void dirs(s1 dirStack, char *command) {
+//         char cwd_buffer[256];
+//         if (isEmpty(dirStack)){
+//                 getcwd(cwd_buffer, 256);
+//                 push(&dirStack, cwd_buffer);
+//         }
+//         int complete = print(&dirStack);
+//         fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
+// }
