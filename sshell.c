@@ -285,20 +285,17 @@ void cd(char *command) {
         }
         complete = chdir(dir);
         if (complete != 0) {
-               fprintf(stderr, "Error: cannot cd into directory"); 
+               fprintf(stderr, "Error: cannot cd into directory\n"); 
         }
         fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
 }
 void pwd(char *command) {
-        char *workingDir;
         char cwdBuffer[512];
         int complete;
-        workingDir = getcwd(cwdBuffer, 512);
-        //if (workingDir) {
-                printf("%s\n", workingDir);
-                complete = 0;
-                fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
-        //}
+        getcwd(cwdBuffer, sizeof(cwdBuffer));
+        printf("%s \n", cwdBuffer);
+        complete = 0;
+        fprintf(stderr, "+ completed '%s' [ %d ]\n", command, WEXITSTATUS(complete));
 }
 void newStack(s1 *dirStack) {
         dirStack->top = -1;
