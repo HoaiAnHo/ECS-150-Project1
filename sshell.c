@@ -7,33 +7,24 @@
 #define CMDLINE_MAX 512
 
 struct cmd_line {
+        char *raw_cmd;
         char *command1;
         char *arg1;
         char *meta_char;
         char *o_filename;
-        
-};
-struct full_cmds {
-        char *raw_cmd;
+        char *cpy;
+        pid_t cmd_pid;
 };
 int main(void)
 {
         char cmd[CMDLINE_MAX];
 
         while (1) {
-                char *nl;
-                //int retval;
-                //char *arg1;
-                //char *arg2 = "";
-                //char *command1;
-                char *command_copy;
-                //char *parse_arg = NULL;
-                //char *full_cmd;
-                pid_t pid;
-                pid_t pipe_id;
+                char command_copy[CMDLINE_MAX];
+                //pid_t pid;
                 char cwd_buffer[256];
                 int fd;
-                //char *args[] = {arg1, NULL};
+                char *nl;
 
 
                 /* Print prompt */
@@ -56,163 +47,176 @@ int main(void)
                 }
 
                 // pipe parse test
-                struct full_cmds pipe_cmds[3];
+                struct cmd_line pipe_cmds[4];
                 char* pipe_check = strchr(cmd, '|');
                 //printf("%s", pi)
-                int pipe_spot = 0;
+                int pipe_amount = 0;
                 // if symbol found, split into commands
                 char cmd_copy[CMDLINE_MAX];
                 strcpy(cmd_copy, cmd);
+                strcpy(command_copy, cmd);
                 if (pipe_check)
                 {
                         char* token;
                         token = strtok(cmd_copy, "|");
-
-                        
                         while (token != NULL) {
                                 while (token[0] == ' ') {
                                         token++;
                                 }
-                                pipe_cmds[pipe_spot].raw_cmd = token;
-                                pipe_spot++;
+                                pipe_cmds[pipe_amount].raw_cmd = token;
+                                pipe_amount++;
                                 token = strtok(NULL, "|");
                         }
                 }
-                if (pipe_spot == 0) {
-                        pipe_cmds[pipe_spot].raw_cmd = cmd;
-                        pipe_spot++;
-                }
-                pipe_spot--;
-                
-                if (pipe_spot == 1) {
-                        int filedesc[2];
-                        pipe(filedesc);
-                        pipe_id = fork();
-                        //pipe_id = fork();
-                        //parent
-                        if (pipe_id > 0) {
-                                //printf("#1%i\n", pipe_id);
-                                int pipe_status;
-                                waitpid(pipe_id, &pipe_status, 0);
-                                close(filedesc[0]);
-                                dup2(filedesc[1], STDOUT_FILENO);
-                                close(filedesc[1]);
-                                printf("parent\n");
-                                pipe_spot = 1;
-                        }
-                        //child 1?
-                        else if (pipe_id == 0) {
-                                close(filedesc[1]);
-                                dup2(filedesc[0], STDIN_FILENO);
-                                close(filedesc[0]);
-                                printf("child\n");
-                                pipe_spot = 0;
-                        }
+                if (pipe_amount == 0) {
+                        pipe_cmds[pipe_amount].raw_cmd = cmd;
+                        pipe_amount++;
                 }
 
-                char* cur_cmd = pipe_cmds[pipe_spot].raw_cmd;
-                printf("%s\n", cur_cmd);
+                //lines 89 - 127
+                for (int i = 0; i < pipe_amount; i++){
+                        /* Parse for arguments */
+                        /* first argument */
+                        pipe_cmds[i].cpy = strdup(pipe_cmds[i].raw_cmd);
+                        // with pipe process, check if any leading white spaces for command
+                        pipe_cmds[i].arg1 = strchr(pipe_cmds[i].cpy,' ');
+                        // char * last = strrchr(pipe_cmds[i].arg1,' ');
 
 
-
-                struct cmd_line c1;
-
-                /* Parse for arguments */
-                /* first argument */
-                command_copy = strdup(cur_cmd);
-                // with pipe process, check if any leading white spaces for command
-                c1.arg1 = strchr(command_copy,' ');
-
-
-                /* extracts the space from the argument */
-                if (c1.arg1) {
-                        c1.arg1++;
-                        while (c1.arg1[0] == ' ' && c1.arg1 != NULL) {
-                                c1.arg1++;
+                        /* extracts the space from the argument */
+                        if (pipe_cmds[i].arg1) {
+                                pipe_cmds[i].arg1++;
+                                while (pipe_cmds[i].arg1[0] == ' ' && pipe_cmds[i].arg1 != NULL) {
+                                        pipe_cmds[i].arg1++;
+                                }
+                                /* Check for Output Redirection */
+                                pipe_cmds[i].meta_char = strchr(pipe_cmds[i].arg1, '>');
                         }
-                        /* Check for Output Redirection */
-                        c1.meta_char = strchr(c1.arg1, '>');
-                }
-                //printf("meta_char: %s ", c1.meta_char);
 
-                /* Command */
-                c1.command1 = strtok(cur_cmd, " ");
+                        /* Command */
+                        pipe_cmds[i].command1 = strtok(pipe_cmds[i].raw_cmd, " ");
 
 
-                /* Exclude Output Redirection from Arguments */
-                if (c1.meta_char) {
-                        c1.o_filename = c1.meta_char;
-                        while(c1.o_filename[0] == '>') {
-                                c1.o_filename++;
+                        /* Exclude Output Redirection from Arguments */
+                        if (pipe_cmds[i].meta_char) {
+                                pipe_cmds[i].o_filename = pipe_cmds[i].meta_char;
+                                while(pipe_cmds[i].o_filename[0] == '>') {
+                                        pipe_cmds[i].o_filename++;
+                                }
+                                fd = open(pipe_cmds[i].o_filename,O_WRONLY | O_CREAT, 0644);
+                                pipe_cmds[i].arg1 = strtok(pipe_cmds[i].arg1,">");
+                                pipe_cmds[i].arg1 = strtok(pipe_cmds[i].arg1," ");
                         }
-                        //printf("filename: %s", c1.o_filename);
-                        fd = open(c1.o_filename,O_WRONLY | O_CREAT, 0644);
-                        //printf("arg1: %s ", c1.arg1);
-                        c1.arg1 = strtok(c1.arg1,">");
-                        //printf("arg1: %s ", c1.arg1);
-                        c1.arg1 = strtok(c1.arg1," ");
-                        // if (strcmp(c1.command1, "echo")) {
-                        //         c1.arg1 = strtok(c1.arg1," ");
-                        // }
-                        //c1.arg1 = strtok(c1.arg1," ");
-                        // if (c1.arg1[0] == ' ') {
-                        //         c1.arg1 = NULL;
-                        // } else {
-                        //         c1.arg1 = strtok(c1.arg1," ");
-                        // }
-                        // printf("arg2: %s ", c1.arg1);
                 }
-
-                char *args[] = {c1.command1, c1.arg1, NULL};
 
 
                 /* Builtin command */
                 /* Exit */
-                if (!strcmp(cur_cmd, "exit")) {
+                if (!strcmp(cmd, "exit")) {
                         fprintf(stderr, "Bye...\n");
                         break;
                 }
 
                 /* cd */
-                if (!strcmp(c1.command1, "cd")) {
-                        chdir(c1.arg1);
+                if (!strcmp(pipe_cmds[0].command1, "cd")) {
+                        chdir(pipe_cmds[0].arg1);
                 }
 
                 /* pwd */
-                if (!strcmp(cur_cmd, "pwd")){
+                if (!strcmp(cmd, "pwd")){
                         getcwd(cwd_buffer, 256);
                 }
 
-                /* Regular command */
-                // retval = system(cmd);
-                // fprintf(stdout, "Return status value for '%s': %d\n",
-                //         cmd, retval);
+                // PRETEND that each cmd in array is parsed now
 
-                /* fork() + exec() + wait() */
-                pid = fork();
+                // create loop
+                // fork within loop
+                // for each command regardless of pipes, fork
+                int filedesc[2];
+                pipe(filedesc);
+                pid_t pid = fork();
+                // if child 1
                 if (pid == 0) {
-                        /* Child */
-                        /* Setup for Output Redirection */
-                        if (c1.meta_char) {
+                        close(filedesc[0]);
+                        dup2(filedesc[1], STDOUT_FILENO);
+                        close(filedesc[1]);
+                        char *args[] = {pipe_cmds[0].command1, pipe_cmds[0].arg1, NULL};
+                        if (pipe_cmds[0].meta_char) {
                                 dup2(fd, STDOUT_FILENO);
-                                execvp(c1.command1, args);
+                                execvp(pipe_cmds[0].command1, args);
                                 close(fd);
-                        } else {
-                                execvp(c1.command1, args);
                         }
-                        perror("execv");
+                        else {
+                                execvp(pipe_cmds[0].command1, args);
+                        }
+                        perror("execvp");
                         exit(1);
-                } else if (pid > 0) {
-                        /* Parent */
+                }
+                //parent
+                else if (pid > 0) {
                         int status;
                         waitpid(pid, &status, 0);
-                        //printf( "Return status value for '%s' : %d\n", bin, WEXITSTATUS(status));
-                        fprintf(stderr, "+ completed '%s' [ %d ]\n", command_copy, WEXITSTATUS(status));
-                } else {
+                        pid_t pid_2 = 1; 
+                        if (pipe_amount == 2) pid_2 = fork();
+                        if (pid_2 == 0){
+                                // if child 2
+                                close(filedesc[1]);
+                                dup2(filedesc[0], STDIN_FILENO);
+                                close(filedesc[0]);
+                                char *args2[] = {pipe_cmds[1].command1, pipe_cmds[1].arg1, NULL};
+                                int ret = execvp(pipe_cmds[1].command1, args2);
+                                printf("%d\n", ret);
+                                //where file goes poof
+                                perror("execvp");
+                                exit(1);
+                        }
+                        //true parent
+                        else if (pid > 0){
+                                int new_status;
+                                if (pipe_amount == 2) {
+                                        waitpid(pid_2, &new_status, 0);
+                                }
+                                else {
+                                        new_status = status;
+                                }
+                                if (pipe_amount == 1) fprintf(stderr, "+ completed '%s' [%d]\n", command_copy, WEXITSTATUS(new_status));
+                                else fprintf(stderr, "+ completed '%s' [%d][%d]\n", command_copy, WEXITSTATUS(status), WEXITSTATUS(new_status));
+                        }
+                        else {
+                                perror("fork");
+                                exit(1);
+                        }
+                }
+                else {
                         perror("fork");
                         exit(1);
                 }
-        }
 
+                // char *args[] = {pipe_cmds[0].command1, pipe_cmds[0].arg1, NULL};
+
+                // /* fork() + exec() + wait() */
+                // pid = fork();
+                // if (pid == 0) {
+                //         /* Child */
+                //         /* Setup for Output Redirection */
+                //         if (pipe_cmds[0].meta_char) {
+                //                 dup2(fd, STDOUT_FILENO);
+                //                 execvp(pipe_cmds[0].command1, args);
+                //                 close(fd);
+                //         } else {
+                //                 execvp(pipe_cmds[0].command1, args);
+                //         }
+                //         perror("execv");
+                //         exit(1);
+                // } else if (pid > 0) {
+                //         /* Parent */
+                //         int status;
+                //         waitpid(pid, &status, 0);
+                //         fprintf(stderr, "+ completed '%s' [%d]\n", command_copy, WEXITSTATUS(status));
+                // } else {
+                //         perror("fork");
+                //         exit(1);
+                // }
+        }
         return EXIT_SUCCESS;
 }
