@@ -28,7 +28,7 @@ typedef struct stack s1;
 
 /* Function Prototypes */
 int checkRedirect(char *command, char direction);
-void removeSpace(char *commandLine);
+char *removeSpace(char *commandLine);
 void cd(char *command);
 void pwd(char *command);
 void newStack(s1 *dirStack);
@@ -151,7 +151,7 @@ int main(void)
 
                 /* extracts the space from the argument */
                 if (c1.arg1) {
-                        removeSpace(c1.arg1);
+                        c1.arg1 = removeSpace(c1.arg1);
                 }
 
                 /* Command */
@@ -166,7 +166,7 @@ int main(void)
                 if (c1.metaCharOut) {
                         c1.oFilename = strchr(commandCopy, '>');
                         c1.oFilename++;
-                        removeSpace(c1.oFilename);
+                        c1.oFilename = removeSpace(c1.oFilename);
                         if (c1.oFilename == NULL) {
                                 fprintf(stderr, "Error: no output file\n");
                         }
@@ -177,7 +177,7 @@ int main(void)
                 if (c1.metaCharIn) {
                         c1.inFilename = strrchr(commandCopy, '<');
                         c1.inFilename++;
-                        removeSpace(c1.inFilename);
+                        c1.inFilename = removeSpace(c1.inFilename);
                         if (c1.inFilename == NULL) {
                                 fprintf(stderr, "Error: no input file\n");
                         }
@@ -196,7 +196,7 @@ int main(void)
                                 c1.arg1 = NULL;
                         } else {
                                 c1.arg1 = strtok(c1.arg1, ">");
-                                removeSpace(c1.arg1);
+                                c1.arg1 = removeSpace(c1.arg1);
                                 if (c1.arg1 == c1.oFilename) {
                                         c1.arg1 = NULL;
                                 }
@@ -206,7 +206,7 @@ int main(void)
                 //* Clean up Argument if File Input */
                 if (c1.metaCharIn) {
                         c1.arg1 = strtok(c1.arg1, "<");
-                        removeSpace (c1.arg1);
+                        c1.arg1 = removeSpace (c1.arg1);
                 }
 
                 /* Special Case for Echo */
@@ -267,7 +267,7 @@ int checkRedirect(char *command, char direction) {
         }
         return 0;
 }
-void removeSpace(char *commandLine) {
+char *removeSpace(char *commandLine) {
         /* Removes spaces in the front */
         while(commandLine[0] == ' ' && commandLine != NULL) {
                 commandLine++;
@@ -279,6 +279,7 @@ void removeSpace(char *commandLine) {
                 commandLine[index] = '\0';
                 index--;
         }
+        return commandLine;
 }
 void cd(char *command) {
         char *dir;
