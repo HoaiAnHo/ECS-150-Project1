@@ -47,15 +47,22 @@ The pipe-work branch was the closest we got to implementing pipelining. The last
 issue we ran into was that although the pipeline was implemented between two
 commands, and we would get the output needed from the second command, the last
 execution would never finish and we would be forced to kill the shell in order 
-to continue.
+to continue. It looks like the issue might've been a file closing issue, but
+we couldn't figure out the cause or solution in time.
 
 The initial plan was to utilize a loop to count the number of pipe meta
 characters, then use that number to loop through the full command to split
 into smaller raw commands. We would then create an array of command line structs
 where certain indexes would hold those commands in order. The process of parsing
 through commands to assign an individual struct its own argument members would
-also be a loop dependent on the number of commands given on the line. After the
-process, we then enter the execution phase. I was assuming sm
+also be a loop dependent on the number of commands given on the line. We would
+then create the file descriptors and pipe them for two commands. After the
+process, we then enter the execution phase. We were assuming that based on many
+OH recommendations, we would have to do the usual forking process and execution
+function, but after the first wait call finishes the first child (who redirects
+its output to the pipe), we then fork a second time and redirect input for the
+second child. This resulted in a lot of nested if/else statements (which if we 
+could dedicate more time, we'd have to clean up). 
 
 ## Phase 6
 We were able to implement standard input redirection by using similar logic to
