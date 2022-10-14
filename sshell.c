@@ -11,7 +11,7 @@
 #define SIZE 500
 
 
-struct cmd_line {
+struct cmdLine {
         char *command1;
         char *arg1;
         int metaCharOut;
@@ -137,7 +137,7 @@ int main(void)
                         fprintf(stderr, "+ completed '%s' [%d]\n", cmd, WEXITSTATUS(complete));
                 }
 
-                struct cmd_line c1;
+                struct cmdLine c1;
 
                 /* Check for Output Redirection */
                 c1.metaCharOut = checkRedirect(cmd, '>');
@@ -171,7 +171,6 @@ int main(void)
                         if (c1.oFilename == NULL) {
                                 fprintf(stderr, "Error: no output file\n");
                         }
-                        //fdOut = open(c1.oFilename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 }
 
                 /* Get Input FileName */
@@ -182,11 +181,6 @@ int main(void)
                         if (c1.inFilename == NULL) {
                                 fprintf(stderr, "Error: no input file\n");
                         }
-                        // fdIn = open(c1.inFilename, O_RDONLY, 0644);
-                        // if (fdIn == -1) {
-                        //         fprintf(stderr, "Error: cannot open input file\n");
-                        //         builtIn = 1;
-                        // }
                 }
 
                 /* Clean up Argument if File Output */
@@ -222,7 +216,7 @@ int main(void)
                         pid = fork();
                         if (pid == 0) {
                                 /* Child */
-                                /* Setup for Output Redirection */
+                                /* Setup for Redirection */
                                 if (c1.metaCharOut) {
                                         fdOut = open(c1.oFilename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
                                         dup2(fdOut, STDOUT_FILENO);

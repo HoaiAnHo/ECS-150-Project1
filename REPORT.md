@@ -1,4 +1,4 @@
-**# Implementation Description**
+# Implementation Description
 Out of the current work we've done, we were able to fully implement Phases 0, 
 1, 2, and 4. Phase 3 and 6 are similar in concepts, but were a little shaky in 
 how effective they consistently were (at least according to the autograder). 
@@ -31,13 +31,16 @@ to a char * returning function, as the scope of the changes made in there would
 not return outside.
 
 ## Phase 3
-Implementing pwd and cd was interesting, as there doesn't appear to be major 
-issues, yet the autograder still returns incorrectly. Of course, we used given
-class functions like chdir() for the work.
+We implemented cd and pwd by following the sample code given in lecture and also 
+following the libc documentation, as there doesn't appear to be major issues, 
+yet the autograder still returns incorrectly. We used given class functions like chdir() 
+and getcwd() for the work.
 
 ## Phase 4
 Continuing with the string parsing from Phase 2, we used strchr() to search 
-for the metacharacter '>'.
+for the metacharacter '>'. If this character was found, we would parse the string 
+for the filename. Then we used the appropriate open() function and dup2() to set up
+the redirection. After the command had been executed, we closed files.
 
 ## Phase 5
 The pipe-work branch was the closest we got to implementing pipelining. The last
@@ -55,19 +58,21 @@ also be a loop dependent on the number of commands given on the line. After the
 process, we then enter the execution phase. I was assuming sm
 
 ## Phase 6
-While implementing standard input redirection wasn't feasible for this project,
-we were able to utilize a combination of cd/pwd work and some helper functions 
-for linked lists to implement the extra pushd, popd, and dirs commands.
-
-As there were issues with the scope of changes made within helper functions, we
-tried changing the newStack, push, and pop functions into returning structure
-pointer functions.
+We were able to implement standard input redirection by using similar logic to
+output redirection. We parsed the command line for the "<" character. The only 
+difference was we had to implement error handling for if the file did not exist
+or could not be opened. We had a more difficult time implementing the stack 
+directory because the stack data was being altered everytime something was pushed
+onto the stack. Later, we realized this was because the address of the stack was
+being pushed in and our function would alter all the values that were associated 
+with the stack. If given more time, we would have a better chance of properly
+implementing this feature. It also took a long time and a lot of research to figure
+out how to pass in the arguments correctly with pointers and references.
 
 ## The Debugging Process
-We didn't utilize gdb for much debugging, but instead did some good
-old-fashioned print statements. There was a short time where we had to do some
-string concatenation in order to execute commands (adding "/bin/" to the front
-of first commands) before we realized we could've used execvp(). The bulk of 
-the project was last spent on trying to fix phases 3, 5, and 6. Space
-characters were also a boon, as we tried to remove whatever amounts remained 
-without causing segmentation faults.
+We didn't utilize gdb for much debugging, but instead utilized print statements. 
+There was a short time where we had to do some string concatenation in order to 
+execute commands (adding "/bin/" to the front of first commands) before we 
+realized we could've used execvp(). The bulk of the project was last spent on 
+trying to fix phases 3, 5, and 6. Space characters were also a boon, as we tried 
+to remove whatever amounts remained without causing segmentation faults.
