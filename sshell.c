@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <sys/stat.h>
 
 
 #define CMDLINE_MAX 512
@@ -114,8 +113,7 @@ int main(void)
                         while (dir[0] == ' ' && dir[0] != '\0') {
                                 dir++;
                         }
-                        struct stat st;
-                        if(stat(dir,&st) != 0) complete = -1;
+                        complete = chdir(dir);
                         if (!complete) {
                                 getcwd(cwdBuffer, 256);
                                 stackDir = push(&stackDir, cwdBuffer);
