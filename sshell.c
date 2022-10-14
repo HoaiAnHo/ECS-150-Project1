@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 
 #define CMDLINE_MAX 512
@@ -31,9 +32,9 @@ int checkRedirect(char *command, char direction);
 char *removeSpace(char *commandLine);
 void cd(char *command);
 void pwd(char *command);
-void newStack(s1 *dirStack);
-void push(s1 *dirStack, char* directory);
-int pop(s1 *dirStack);
+s1 newStack(s1 *dirStack);
+s1 push(s1 *dirStack, char* directory);
+s1 pop(s1 *dirStack);
 int isEmpty(s1 *dirStack);
 int print(s1 *dirStack);
 
@@ -42,7 +43,7 @@ int main(void)
 {
         char cmd[CMDLINE_MAX];
         s1 stackDir;
-        newStack(&stackDir);
+        stackDir = newStack(&stackDir);
 
         while (1) {
                 char *nl;
@@ -100,7 +101,7 @@ int main(void)
                         builtIn = 1;
                         if (isEmpty(&stackDir)){
                                 getcwd(cwdBuffer, 256);
-                                push(&stackDir, cwdBuffer);
+                                stackDir = push(&stackDir, cwdBuffer);
                         }
                         complete = print(&stackDir);
                         fprintf(stderr, "+ completed '%s' [%d]\n", cmd, WEXITSTATUS(complete));
@@ -110,13 +111,14 @@ int main(void)
                 if (!strncmp(cmd, "pushd", 5)) {
                         builtIn = 1;
                         dir = strchr(cmd, ' ');
-                        if (dir[0] == ' ') {
+                        while (dir[0] == ' ' && dir[0] != '\0') {
                                 dir++;
                         }
-                        complete = chdir(dir);
+                        struct stat st;
+                        if(stat(dir,&st) != 0) complete = -1;
                         if (!complete) {
                                 getcwd(cwdBuffer, 256);
-                                push(&stackDir, cwdBuffer);
+                                stackDir = push(&stackDir, cwdBuffer);
                         } else {
                                 fprintf(stderr, "Error: no such directory\n");
                         }
@@ -130,7 +132,8 @@ int main(void)
                                 fprintf(stderr, "Error: directory stack empty\n");
                                 complete = 1;
                         } else {
-                                complete = pop(&stackDir);
+                                stackDir = pop(&stackDir);
+                                complete = 0;
                                 chdir("..");
                         }
                         fprintf(stderr, "+ completed '%s' [%d]\n", cmd, WEXITSTATUS(complete));
@@ -285,7 +288,7 @@ void cd(char *command) {
         char *dir;
         int complete;
         dir = strchr(command, ' ');
-        while(dir[0] == ' ') {
+        while(dir[0] == ' ' && dir[0] != '\0') {
                 if (dir[0] == ' ') {
                 dir++;
                 }
@@ -304,18 +307,20 @@ void pwd(char *command) {
         complete = 0;
         fprintf(stderr, "+ completed '%s' [%d]\n", command, WEXITSTATUS(complete));
 }
-void newStack(s1 *dirStack) {
+s1 newStack(s1 *dirStack) {
         dirStack->top = -1;
         dirStack->size = 0;
+        return *dirStack;
 }
-void push(s1 *dirStack, char* directory) {
+s1 push(s1 *dirStack, char* directory) {
         ++dirStack->top;
         dirStack->directory[dirStack->top] = directory;
+        return *dirStack;
 }
-int pop(s1 *dirStack) {
+s1 pop(s1 *dirStack) {
         dirStack->directory[dirStack->top] = NULL;
         dirStack->top--;
-        return 0;
+        return *dirStack;
 }
 int isEmpty(s1 *dirStack) {
         if (dirStack->top == -1) {
