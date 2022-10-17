@@ -13,7 +13,6 @@ struct cmd_line {
         char *meta_char;
         char *o_filename;
         char *cpy;
-        pid_t cmd_pid;
 };
 int main(void)
 {
@@ -21,7 +20,6 @@ int main(void)
 
         while (1) {
                 char command_copy[CMDLINE_MAX];
-                //pid_t pid;
                 char cwd_buffer[256];
                 int fd;
                 char *nl;
@@ -46,12 +44,12 @@ int main(void)
                         *nl = '\0';
                 }
 
-                // pipe parse test
+                // Pipe parsing -----------------------------------------------------
+                // We create an array of commands, one for each piped command
                 struct cmd_line pipe_cmds[4];
                 char* pipe_check = strchr(cmd, '|');
-                //printf("%s", pi)
                 int pipe_amount = 0;
-                // if symbol found, split into commands
+                // if pipe symbol found, split into raw commands
                 char cmd_copy[CMDLINE_MAX];
                 strcpy(cmd_copy, cmd);
                 strcpy(command_copy, cmd);
@@ -68,19 +66,19 @@ int main(void)
                                 token = strtok(NULL, "|");
                         }
                 }
+                // if no pipe is found, we're dealing with the first cmd only in cmds array -----------
                 if (pipe_amount == 0) {
                         pipe_cmds[pipe_amount].raw_cmd = cmd;
                         pipe_amount++;
                 }
 
-                //lines 89 - 127
+                // For each raw command, parse and grab elements in a loop
                 for (int i = 0; i < pipe_amount; i++){
                         /* Parse for arguments */
                         /* first argument */
                         pipe_cmds[i].cpy = strdup(pipe_cmds[i].raw_cmd);
-                        // with pipe process, check if any leading white spaces for command
+                        // with pipe process, check if any leading white spaces for command ---------------
                         pipe_cmds[i].arg1 = strchr(pipe_cmds[i].cpy,' ');
-                        // char * last = strrchr(pipe_cmds[i].arg1,' ');
 
 
                         /* extracts the space from the argument */
@@ -127,11 +125,7 @@ int main(void)
                         getcwd(cwd_buffer, 256);
                 }
 
-                // PRETEND that each cmd in array is parsed now
-
-                // create loop
-                // fork within loop
-                // for each command regardless of pipes, fork
+                // create file descriptor for pipe ------------------------------------------
                 int filedesc[2];
                 if (pipe_amount > 1) {
                         pipe(filedesc);
@@ -140,14 +134,16 @@ int main(void)
                         close(filedesc[0]);
                         close(filedesc[1]);
                 }
+                // regular execution of system commands, but pipe style ----------------------
                 pid_t pid = fork();
-                // if child 1
+                // First child redirects output of its execution -----------------------------
                 if (pid == 0) {
                         if (pipe_amount > 1){
                                 close(filedesc[0]);
                                 dup2(filedesc[1], STDOUT_FILENO);
                                 close(filedesc[1]);
                         }
+                        // I moved arguments to here since I didn't know how to include them in struct
                         char *args[] = {pipe_cmds[0].command1, pipe_cmds[0].arg1, NULL};
                         if (pipe_cmds[0].meta_char) {
                                 dup2(fd, STDOUT_FILENO);
@@ -160,7 +156,7 @@ int main(void)
                         perror("execvp");
                         exit(1);
                 }
-                //parent
+                // Parent waits for first child to finish --------------------------------------
                 else if (pid > 0) {
                         int status;
                         waitpid(pid, &status, 0);
@@ -168,19 +164,17 @@ int main(void)
                         if (pipe_amount > 1) pid_2 = fork();
                         else goto gohome;
                         if (pid_2 == 0){
-                                // if child 2
+                                // Second child redirects input and executes second command -----------------
                                 close(filedesc[1]);
                                 dup2(filedesc[0], STDIN_FILENO);
                                 close(filedesc[0]);
-                                printf("file 0 %d\n", filedesc[0]);
-                                printf("file 1 %d\n", filedesc[1]);
                                 char *args2[] = {pipe_cmds[1].command1, pipe_cmds[1].arg1, NULL};
                                 execvp(pipe_cmds[1].command1, args2);
                                 //where file goes poof
                                 perror("execvp");
                                 exit(1);
                         }
-                        //true parent
+                        // Everyone comes here to this parent regardless of pipes ----------------------------
                         else if (pid_2 > 0){
                                 int new_status;
                                 if (pipe_amount == 2) {
